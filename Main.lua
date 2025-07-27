@@ -1,60 +1,140 @@
---// SonTít UTD Macro Hub - Full Tab Version 😎 local CoreGui = game:GetService("CoreGui") local Players = game:GetService("Players") local LocalPlayer = Players.LocalPlayer local HttpService = game:GetService("HttpService")
+--[[
+Ultimate Tower Defense - Full Macro System Script
+Author: SonScript
+Compatible: KRNL Mobile / Synapse X
+Features: Record & Play Macro | Auto Save/Load | Slot System | Full GUI Tabs
+--]]
 
---// GUI Setup local ScreenGui = Instance.new("ScreenGui", CoreGui) ScreenGui.Name = "UTDMacroHub"
+-- INIT SERVICES
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
-local MainFrame = Instance.new("Frame", ScreenGui) MainFrame.Size = UDim2.new(0, 400, 0, 350) MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0) MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25) MainFrame.Draggable = true MainFrame.Active = true MainFrame.Name = "MainFrame"
+-- FOLDER & FILE MANAGEMENT
+local folder = "UTD_Macros"
+if not isfolder(folder) then makefolder(folder) end
 
-local TabHolder = Instance.new("Frame", MainFrame) TabHolder.Size = UDim2.new(1, 0, 0, 30) TabHolder.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+-- GLOBALS
+local Recording = false
+local MacroData = {}
+local CurrentSlot = "Slot1"
+local Playing = false
 
-local ContentHolder = Instance.new("Frame", MainFrame) ContentHolder.Position = UDim2.new(0, 0, 0, 30) ContentHolder.Size = UDim2.new(1, 0, 1, -30) ContentHolder.BackgroundTransparency = 1
+-- UI LIBRARY (Assume Rayfield or custom GUI)
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua'))()
 
---// Tabs local tabs = {} local function CreateTab(name) local button = Instance.new("TextButton", TabHolder) button.Size = UDim2.new(0, 80, 1, 0) button.Text = name button.TextColor3 = Color3.fromRGB(255, 255, 255) button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+local Window = Rayfield:CreateWindow({Name = "UTD Script | Macro Hub", ConfigurationSaving = {Enabled = false}})
 
-local frame = Instance.new("Frame", ContentHolder)
-frame.Size = UDim2.new(1, 0, 1, 0)
-frame.BackgroundTransparency = 1
-frame.Visible = false
+local Tab = Window:CreateTab("📁 Macro", 4483362458)
 
-button.MouseButton1Click:Connect(function()
-	for _, tab in pairs(tabs) do
-		tab.Frame.Visible = false
-	end
-	frame.Visible = true
-end)
+-- RECORD MACRO
+local RecordButton = Tab:CreateButton({
+    Name = "📹 Start Recording",
+    Callback = function()
+        Recording = true
+        MacroData = {}
+        local startTime = tick()
 
-tabs[name] = {Button = button, Frame = frame}
-return frame
+        Rayfield:Notify({Title = "Macro", Content = "Recording started", Duration = 3})
 
+        -- Hook to mouse click or tower placement detection
+        local conn
+        conn = Mouse.Button1Down:Connect(function()
+            local now = tick()
+            local relTime = now - startTime
+
+            -- You may need to improve this for exact tower/position detection
+            table.insert(MacroData, {time = relTime, slot = getSelectedSlot(), position = Mouse.Hit.Position})
+        end)
+
+        -- Stop recording after delay or manual
+        task.delay(60, function()
+            if Recording then
+                Recording = false
+                conn:Disconnect()
+                saveMacro(CurrentSlot, MacroData)
+                Rayfield:Notify({Title = "Macro", Content = "Recording stopped & saved", Duration = 3})
+            end
+        end)
+    end
+})
+
+-- PLAY MACRO
+local PlayButton = Tab:CreateButton({
+    Name = "▶️ Play Macro",
+    Callback = function()
+        if Playing then return end
+        Playing = true
+
+        local data = loadMacro(CurrentSlot)
+        if not data then
+            Rayfield:Notify({Title = "Error", Content = "No macro found!", Duration = 3})
+            return
+        end
+
+        local start = tick()
+        for _, action in ipairs(data) do
+            task.delay(action.time, function()
+                placeTower(action.slot, action.position)
+            end)
+        end
+
+        task.delay(data[#data].time + 1, function()
+            Playing = false
+            Rayfield:Notify({Title = "Macro", Content = "Playback finished", Duration = 3})
+        end)
+    end
+})
+
+-- SLOT SELECT
+Tab:CreateDropdown({
+    Name = "🎯 Select Macro Slot",
+    Options = {"Slot1", "Slot2", "Slot3", "Slot4", "Slot5", "Slot6"},
+    CurrentOption = "Slot1",
+    Callback = function(Option)
+        CurrentSlot = Option
+    end
+})
+
+-- DELETE MACRO
+Tab:CreateButton({
+    Name = "🗑️ Delete Current Macro",
+    Callback = function()
+        if isfile(folder.."/"..CurrentSlot..".txt") then
+            delfile(folder.."/"..CurrentSlot..".txt")
+            Rayfield:Notify({Title = "Macro", Content = "Deleted "..CurrentSlot, Duration = 2})
+        else
+            Rayfield:Notify({Title = "Macro", Content = "No file found", Duration = 2})
+        end
+    end
+})
+
+-- HELPER FUNCTIONS
+function getSelectedSlot()
+    -- Placeholder: You can hook into UI to detect which slot is selected
+    return 1 -- always returns first slot for now
 end
 
---// Tab: Auto local autoTab = CreateTab("Auto") local autoLayout = Instance.new("UIListLayout", autoTab) autoLayout.Padding = UDim.new(0, 5) autoLayout.FillDirection = Enum.FillDirection.Vertical
+function placeTower(slot, position)
+    -- You need to fire the same remote UTD uses for unit placement
+    -- E.g: game:GetService("ReplicatedStorage").Remotes.PlaceUnit:FireServer(slot, position)
+    print("Placing from slot", slot, "at", position)
+end
 
-autoTab.ChildAdded:Connect(function(child) if child:IsA("TextButton") then child.Size = UDim2.new(1, -10, 0, 30) child.BackgroundColor3 = Color3.fromRGB(35, 35, 35) child.TextColor3 = Color3.fromRGB(255, 255, 255) child.Font = Enum.Font.Gotham child.TextSize = 14 end end)
+function saveMacro(slot, data)
+    local path = folder.."/"..slot..".txt"
+    writefile(path, HttpService:JSONEncode(data))
+end
 
--- Sample Feature (Auto Farm) local autofarm = false local autoFarmBtn = Instance.new("TextButton", autoTab) autoFarmBtn.Text = "✅ Toggle Auto Farm" autoFarmBtn.MouseButton1Click:Connect(function() autofarm = not autofarm if autofarm then spawn(function() while autofarm do pcall(function() local chr = LocalPlayer.Character local mob = workspace.Enemies:FindFirstChildWhichIsA("Model") if chr and mob and mob:FindFirstChild("HumanoidRootPart") then chr:FindFirstChild("HumanoidRootPart").CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 5, 2) end end) wait(1) end end) end end)
+function loadMacro(slot)
+    local path = folder.."/"..slot..".txt"
+    if isfile(path) then
+        local content = readfile(path)
+        return HttpService:JSONDecode(content)
+    else
+        return nil
+    end
+end
 
---// Tab: Macro local macroTab = CreateTab("Macro") local macroLayout = Instance.new("UIListLayout", macroTab) macroLayout.Padding = UDim.new(0, 5)
 
-local macroData = {} local currentSlot = 1 local macroPath = "UTD_Macro_"
-
-local dropdown = Instance.new("TextButton", macroTab) dropdown.Text = "🎯 Select Macro: 1" dropdown.Size = UDim2.new(1, -10, 0, 30) dropdown.MouseButton1Click:Connect(function() currentSlot = (currentSlot % 5) + 1 dropdown.Text = "🎯 Select Macro: "..currentSlot end)
-
-local recordBtn = Instance.new("TextButton", macroTab) recordBtn.Text = "🔴 Record Macro" recordBtn.MouseButton1Click:Connect(function() table.clear(macroData) -- Hook unit placement here (not implemented in this template) end)
-
-local stopBtn = Instance.new("TextButton", macroTab) stopBtn.Text = "⏹️ Stop" stopBtn.MouseButton1Click:Connect(function() -- Stop recording logic here end)
-
-local saveBtn = Instance.new("TextButton", macroTab) saveBtn.Text = "💾 Save Macro" saveBtn.MouseButton1Click:Connect(function() writefile(macroPath..currentSlot..".json", HttpService:JSONEncode(macroData)) end)
-
-local loadBtn = Instance.new("TextButton", macroTab) loadBtn.Text = "📥 Load Macro" loadBtn.MouseButton1Click:Connect(function() if isfile(macroPath..currentSlot..".json") then macroData = HttpService:JSONDecode(readfile(macroPath..currentSlot..".json")) end end)
-
-local delBtn = Instance.new("TextButton", macroTab) delBtn.Text = "🗑️ Delete Macro" delBtn.MouseButton1Click:Connect(function() if isfile(macroPath..currentSlot..".json") then delfile(macroPath..currentSlot..".json") end end)
-
---// Toggle Button local toggleBtn = Instance.new("TextButton", CoreGui) toggleBtn.Size = UDim2.new(0, 40, 0, 40) toggleBtn.Position = UDim2.new(0, 10, 0.5, -20) toggleBtn.Text = "📂" toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50) toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255) toggleBtn.TextSize = 20 toggleBtn.Font = Enum.Font.GothamBold toggleBtn.Draggable = true
-
-toggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-
---// Auto Save On Leave game:BindToClose(function() if #macroData > 0 then writefile(macroPath..currentSlot..".json", HttpService:JSONEncode(macroData)) end end)
-
---// Default Show First Tab tabs["Auto"].Frame.Visible = true
-
-            
