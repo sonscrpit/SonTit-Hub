@@ -1,136 +1,60 @@
---// Blox Fruits Banana Tab GUI VVIP - By ChatGPT 😎
-local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local TabsFrame = Instance.new("Frame")
-local FarmLevelTab = Instance.new("Frame")
-local UICorner = Instance.new("UICorner")
-local UIListLayout = Instance.new("UIListLayout")
+--// SonTít UTD Macro Hub - Full Tab Version 😎 local CoreGui = game:GetService("CoreGui") local Players = game:GetService("Players") local LocalPlayer = Players.LocalPlayer local HttpService = game:GetService("HttpService")
 
---// Toggle Flags
-local autoFarmLevel = false
-local autoFastAttack = false
-local autoSkill = false
-local autoQuest = false
-local autoTP = false
+--// GUI Setup local ScreenGui = Instance.new("ScreenGui", CoreGui) ScreenGui.Name = "UTDMacroHub"
 
---// Parent
-ScreenGui.Parent = game.CoreGui
-ScreenGui.Name = "BananaTabGUI"
+local MainFrame = Instance.new("Frame", ScreenGui) MainFrame.Size = UDim2.new(0, 400, 0, 350) MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0) MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25) MainFrame.Draggable = true MainFrame.Active = true MainFrame.Name = "MainFrame"
 
---// Main Frame
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 360, 0, 300)
-MainFrame.Active = true
-MainFrame.Draggable = true
-UICorner.Parent = MainFrame
+local TabHolder = Instance.new("Frame", MainFrame) TabHolder.Size = UDim2.new(1, 0, 0, 30) TabHolder.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 
---// Tabs Holder
-TabsFrame.Name = "TabsFrame"
-TabsFrame.Parent = MainFrame
-TabsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-TabsFrame.Size = UDim2.new(0, 360, 0, 300)
-UICorner:Clone().Parent = TabsFrame
+local ContentHolder = Instance.new("Frame", MainFrame) ContentHolder.Position = UDim2.new(0, 0, 0, 30) ContentHolder.Size = UDim2.new(1, 0, 1, -30) ContentHolder.BackgroundTransparency = 1
 
---// Farm Level Tab
-FarmLevelTab.Name = "FarmLevelTab"
-FarmLevelTab.Parent = TabsFrame
-FarmLevelTab.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-FarmLevelTab.Position = UDim2.new(0, 0, 0, 0)
-FarmLevelTab.Size = UDim2.new(1, 0, 1, 0)
+--// Tabs local tabs = {} local function CreateTab(name) local button = Instance.new("TextButton", TabHolder) button.Size = UDim2.new(0, 80, 1, 0) button.Text = name button.TextColor3 = Color3.fromRGB(255, 255, 255) button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 
-UIListLayout.Parent = FarmLevelTab
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 6)
+local frame = Instance.new("Frame", ContentHolder)
+frame.Size = UDim2.new(1, 0, 1, 0)
+frame.BackgroundTransparency = 1
+frame.Visible = false
 
-local function CreateToggle(name, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -20, 0, 30)
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.Text = "[ OFF ] " .. name
-    btn.Parent = FarmLevelTab
-    btn.MouseButton1Click:Connect(function()
-        local state = callback()
-        btn.Text = (state and "[ ON  ] " or "[ OFF ] ") .. name
-    end)
+button.MouseButton1Click:Connect(function()
+	for _, tab in pairs(tabs) do
+		tab.Frame.Visible = false
+	end
+	frame.Visible = true
+end)
+
+tabs[name] = {Button = button, Frame = frame}
+return frame
+
 end
 
--- Auto Farm Level
-CreateToggle("Auto Farm Level", function()
-    autoFarmLevel = not autoFarmLevel
-    if autoFarmLevel then
-        spawn(function()
-            while autoFarmLevel do
-                print("[Auto Farm] Working")
-                -- Add farm logic here
-                wait(2)
-            end
-        end)
-    end
-    return autoFarmLevel
-end)
+--// Tab: Auto local autoTab = CreateTab("Auto") local autoLayout = Instance.new("UIListLayout", autoTab) autoLayout.Padding = UDim.new(0, 5) autoLayout.FillDirection = Enum.FillDirection.Vertical
 
--- Fast Attack
-CreateToggle("Fast Attack", function()
-    autoFastAttack = not autoFastAttack
-    if autoFastAttack then
-        spawn(function()
-            while autoFastAttack do
-                print("[Fast Attack] Enabled")
-                -- Fast attack logic
-                wait(0.1)
-            end
-        end)
-    end
-    return autoFastAttack
-end)
+autoTab.ChildAdded:Connect(function(child) if child:IsA("TextButton") then child.Size = UDim2.new(1, -10, 0, 30) child.BackgroundColor3 = Color3.fromRGB(35, 35, 35) child.TextColor3 = Color3.fromRGB(255, 255, 255) child.Font = Enum.Font.Gotham child.TextSize = 14 end end)
 
--- Auto Skill
-CreateToggle("Auto Skill", function()
-    autoSkill = not autoSkill
-    if autoSkill then
-        spawn(function()
-            while autoSkill do
-                print("[Auto Skill] Using Z, X, C, V")
-                -- Skill usage logic here
-                wait(5)
-            end
-        end)
-    end
-    return autoSkill
-end)
+-- Sample Feature (Auto Farm) local autofarm = false local autoFarmBtn = Instance.new("TextButton", autoTab) autoFarmBtn.Text = "✅ Toggle Auto Farm" autoFarmBtn.MouseButton1Click:Connect(function() autofarm = not autofarm if autofarm then spawn(function() while autofarm do pcall(function() local chr = LocalPlayer.Character local mob = workspace.Enemies:FindFirstChildWhichIsA("Model") if chr and mob and mob:FindFirstChild("HumanoidRootPart") then chr:FindFirstChild("HumanoidRootPart").CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 5, 2) end end) wait(1) end end) end end)
 
--- Auto Quest
-CreateToggle("Auto Quest", function()
-    autoQuest = not autoQuest
-    if autoQuest then
-        spawn(function()
-            while autoQuest do
-                print("[Auto Quest] Active")
-                -- Auto quest logic here
-                wait(3)
-            end
-        end)
-    end
-    return autoQuest
-end)
+--// Tab: Macro local macroTab = CreateTab("Macro") local macroLayout = Instance.new("UIListLayout", macroTab) macroLayout.Padding = UDim.new(0, 5)
 
--- Teleport to Enemy
-CreateToggle("Teleport To Enemy", function()
-    autoTP = not autoTP
-    if autoTP then
-        spawn(function()
-            while autoTP do
-                print("[Teleport] Moving to enemy")
-                -- TP logic here
-                wait(1)
-            end
-        end)
-    end
-    return autoTP
-end)
+local macroData = {} local currentSlot = 1 local macroPath = "UTD_Macro_"
+
+local dropdown = Instance.new("TextButton", macroTab) dropdown.Text = "🎯 Select Macro: 1" dropdown.Size = UDim2.new(1, -10, 0, 30) dropdown.MouseButton1Click:Connect(function() currentSlot = (currentSlot % 5) + 1 dropdown.Text = "🎯 Select Macro: "..currentSlot end)
+
+local recordBtn = Instance.new("TextButton", macroTab) recordBtn.Text = "🔴 Record Macro" recordBtn.MouseButton1Click:Connect(function() table.clear(macroData) -- Hook unit placement here (not implemented in this template) end)
+
+local stopBtn = Instance.new("TextButton", macroTab) stopBtn.Text = "⏹️ Stop" stopBtn.MouseButton1Click:Connect(function() -- Stop recording logic here end)
+
+local saveBtn = Instance.new("TextButton", macroTab) saveBtn.Text = "💾 Save Macro" saveBtn.MouseButton1Click:Connect(function() writefile(macroPath..currentSlot..".json", HttpService:JSONEncode(macroData)) end)
+
+local loadBtn = Instance.new("TextButton", macroTab) loadBtn.Text = "📥 Load Macro" loadBtn.MouseButton1Click:Connect(function() if isfile(macroPath..currentSlot..".json") then macroData = HttpService:JSONDecode(readfile(macroPath..currentSlot..".json")) end end)
+
+local delBtn = Instance.new("TextButton", macroTab) delBtn.Text = "🗑️ Delete Macro" delBtn.MouseButton1Click:Connect(function() if isfile(macroPath..currentSlot..".json") then delfile(macroPath..currentSlot..".json") end end)
+
+--// Toggle Button local toggleBtn = Instance.new("TextButton", CoreGui) toggleBtn.Size = UDim2.new(0, 40, 0, 40) toggleBtn.Position = UDim2.new(0, 10, 0.5, -20) toggleBtn.Text = "📂" toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50) toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255) toggleBtn.TextSize = 20 toggleBtn.Font = Enum.Font.GothamBold toggleBtn.Draggable = true
+
+toggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+
+--// Auto Save On Leave game:BindToClose(function() if #macroData > 0 then writefile(macroPath..currentSlot..".json", HttpService:JSONEncode(macroData)) end end)
+
+--// Default Show First Tab tabs["Auto"].Frame.Visible = true
+
+            
