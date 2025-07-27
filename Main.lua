@@ -1,89 +1,136 @@
--- Script: Auto Farm từ Level 1 đến 2650
-local Player = game.Players.LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
+--// Blox Fruits Banana Tab GUI VVIP - By ChatGPT 😎
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local TabsFrame = Instance.new("Frame")
+local FarmLevelTab = Instance.new("Frame")
+local UICorner = Instance.new("UICorner")
+local UIListLayout = Instance.new("UIListLayout")
 
-local currentQuest = ""
-local questData = {
-    ["Bandit"]         = {level = 1, questName = "BanditQuest1", enemyName = "Bandit"},
-    ["Monkey"]         = {level = 15, questName = "JungleQuest", enemyName = "Monkey"},
-    ["Gorilla"]        = {level = 20, questName = "JungleQuest", enemyName = "Gorilla"},
-    ["Pirate"]         = {level = 30, questName = "BuggyQuest1", enemyName = "Pirate"},
-    ["Brute"]          = {level = 60, questName = "BuggyQuest1", enemyName = "Brute"},
-    ["Desert Bandit"]  = {level = 75, questName = "DesertQuest", enemyName = "Desert Bandit"},
-    ["Snow Bandit"]    = {level = 90, questName = "SnowQuest", enemyName = "Snow Bandit"},
-    ["Chief Petty"]    = {level = 120, questName = "MarineQuest3", enemyName = "Chief Petty Officer"},
-    ["Sky Bandit"]     = {level = 150, questName = "SkyQuest", enemyName = "Sky Bandit"},
-    ["Shanda"]         = {level = 175, questName = "SkyQuest2", enemyName = "Shanda"},
-    ["Dark Master"]    = {level = 200, questName = "SkyQuest3", enemyName = "Dark Master"},
-    ["Prisoner"]       = {level = 220, questName = "PrisonerQuest", enemyName = "Prisoner"},
-    ["Danger Prisoner"]= {level = 250, questName = "PrisonerQuest", enemyName = "Danger Prisoner"},
-    ["Toga Warrior"]   = {level = 275, questName = "ColosseumQuest", enemyName = "Toga Warrior"},
-    -- ... (thêm logic cho các island tiếp theo đến Lv. 2650 nếu cần)
-}
+--// Toggle Flags
+local autoFarmLevel = false
+local autoFastAttack = false
+local autoSkill = false
+local autoQuest = false
+local autoTP = false
 
--- Tìm nhiệm vụ phù hợp theo level hiện tại
-local function getCurrentQuest()
-    local plvl = Player.Data.Level.Value
-    local chosen = nil
-    for name, data in pairs(questData) do
-        if plvl >= data.level then
-            chosen = data
-        end
-    end
-    return chosen
-end
+--// Parent
+ScreenGui.Parent = game.CoreGui
+ScreenGui.Name = "BananaTabGUI"
 
--- Bắt đầu nhiệm vụ
-local function startQuest(data)
-    local remote = ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-    if remote then
-        remote:InvokeServer("StartQuest", data.questName, 1)
-        currentQuest = data.enemyName
-    end
-end
+--// Main Frame
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 360, 0, 300)
+MainFrame.Active = true
+MainFrame.Draggable = true
+UICorner.Parent = MainFrame
 
--- Tìm NPC theo tên
-local function getEnemy()
-    for _, mob in pairs(Workspace.Enemies:GetChildren()) do
-        if mob.Name == currentQuest and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-            return mob
-        end
-    end
-end
+--// Tabs Holder
+TabsFrame.Name = "TabsFrame"
+TabsFrame.Parent = MainFrame
+TabsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TabsFrame.Size = UDim2.new(0, 360, 0, 300)
+UICorner:Clone().Parent = TabsFrame
 
--- Di chuyển & đánh
-local function attackEnemy(enemy)
-    local hrp = Player.Character:FindFirstChild("HumanoidRootPart")
-    if hrp and enemy:FindFirstChild("HumanoidRootPart") then
-        local tween = TweenService:Create(hrp, TweenInfo.new(0.3), {CFrame = enemy.HumanoidRootPart.CFrame + Vector3.new(0,3,0)})
-        tween:Play()
-        tween.Completed:Wait()
+--// Farm Level Tab
+FarmLevelTab.Name = "FarmLevelTab"
+FarmLevelTab.Parent = TabsFrame
+FarmLevelTab.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+FarmLevelTab.Position = UDim2.new(0, 0, 0, 0)
+FarmLevelTab.Size = UDim2.new(1, 0, 1, 0)
 
-        for _, tool in pairs(Player.Backpack:GetChildren()) do
-            if tool:IsA("Tool") then
-                tool.Parent = Player.Character
-                break
-            end
-        end
-    end
-end
+UIListLayout.Parent = FarmLevelTab
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
 
--- Vòng lặp farm
-while wait(0.5) do
-    pcall(function()
-        local questFrame = Player.PlayerGui:FindFirstChild("QuestInfo")
-        if not (questFrame and questFrame.Visible) then
-            local questData = getCurrentQuest()
-            if questData then
-                startQuest(questData)
-            end
-        else
-            local target = getEnemy()
-            if target then
-                attackEnemy(target)
-            end
-        end
+local function CreateToggle(name, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -20, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.Text = "[ OFF ] " .. name
+    btn.Parent = FarmLevelTab
+    btn.MouseButton1Click:Connect(function()
+        local state = callback()
+        btn.Text = (state and "[ ON  ] " or "[ OFF ] ") .. name
     end)
 end
+
+-- Auto Farm Level
+CreateToggle("Auto Farm Level", function()
+    autoFarmLevel = not autoFarmLevel
+    if autoFarmLevel then
+        spawn(function()
+            while autoFarmLevel do
+                print("[Auto Farm] Working")
+                -- Add farm logic here
+                wait(2)
+            end
+        end)
+    end
+    return autoFarmLevel
+end)
+
+-- Fast Attack
+CreateToggle("Fast Attack", function()
+    autoFastAttack = not autoFastAttack
+    if autoFastAttack then
+        spawn(function()
+            while autoFastAttack do
+                print("[Fast Attack] Enabled")
+                -- Fast attack logic
+                wait(0.1)
+            end
+        end)
+    end
+    return autoFastAttack
+end)
+
+-- Auto Skill
+CreateToggle("Auto Skill", function()
+    autoSkill = not autoSkill
+    if autoSkill then
+        spawn(function()
+            while autoSkill do
+                print("[Auto Skill] Using Z, X, C, V")
+                -- Skill usage logic here
+                wait(5)
+            end
+        end)
+    end
+    return autoSkill
+end)
+
+-- Auto Quest
+CreateToggle("Auto Quest", function()
+    autoQuest = not autoQuest
+    if autoQuest then
+        spawn(function()
+            while autoQuest do
+                print("[Auto Quest] Active")
+                -- Auto quest logic here
+                wait(3)
+            end
+        end)
+    end
+    return autoQuest
+end)
+
+-- Teleport to Enemy
+CreateToggle("Teleport To Enemy", function()
+    autoTP = not autoTP
+    if autoTP then
+        spawn(function()
+            while autoTP do
+                print("[Teleport] Moving to enemy")
+                -- TP logic here
+                wait(1)
+            end
+        end)
+    end
+    return autoTP
+end)
