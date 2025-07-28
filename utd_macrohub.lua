@@ -1,170 +1,116 @@
--- ✅ Full Macro Record + Replay hệ thống cho Ultimate Tower Defense
--- 🔧 UI tùy chỉnh không dùng Rayfield + Tự động lưu khi tắt Record
+--// Auto Macro Hub (Rayfield UI) by sonscrpit
+--// Requires Rayfield: https://github.com/shlexware/Rayfield
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua"))()
 
--- Macro dữ liệu
-local MacroList = {}
-local currentMacro = nil
-local isRecording = false
-local isReplaying = false
+local macros = {}
+local selectedMacro = nil
+local recording = false
 local startTime = 0
+local currentRecording = {}
+local fileName = "utd_macros.json"
 
--- File lưu macro (chỉ dùng nếu chạy qua executor hỗ trợ writefile)
+-- Load existing macros
+pcall(function()
+    local data = readfile(fileName)
+    macros = game:GetService("HttpService"):JSONDecode(data)
+end)
+
+-- Save macros to file
 local function saveMacros()
-    if isfile and writefile then
-        local data = HttpService:JSONEncode(MacroList)
-        writefile("utd_macros.json", data)
-        print("✅ Đã lưu macro vào utd_macros.json")
-    end
+    pcall(function()
+        writefile(fileName, game:GetService("HttpService"):JSONEncode(macros))
+    end)
 end
 
-local function loadMacros()
-    if isfile and readfile and isfile("utd_macros.json") then
-        local content = readfile("utd_macros.json")
-        local ok, data = pcall(function()
-            return HttpService:JSONDecode(content)
-        end)
-        if ok and type(data) == "table" then
-            MacroList = data
-            print("✅ Đã tải macro từ file")
+-- UI Setup
+local Window = Rayfield:CreateWindow({
+    Name = "UTD Auto Macro Hub",
+    LoadingTitle = "SonScrpit Loader",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = nil,
+        FileName = "utd_macro_config"
+    },
+})
+
+local MainTab = Window:CreateTab("🎮 Macro", 4483362458)
+
+-- Create Macro Section
+MainTab:CreateInput({
+    Name = "Create Macro",
+    PlaceholderText = "Enter macro name",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(text)
+        if text and text ~= "" and not macros[text] then
+            macros[text] = {}
+            saveMacros()
+            Rayfield:Notify({Title = "Macro Created", Content = text, Duration = 3})
+        end
+    end,
+})
+
+-- Dropdown to select macro
+MainTab:CreateDropdown({
+    Name = "Select Macro",
+    Options = table.getn(macros) > 0 and table.keys(macros) or {"No Macros"},
+    CurrentOption = selectedMacro or "None",
+    Callback = function(option)
+        selectedMacro = option
+    end
+})
+
+-- Record Macro
+MainTab:CreateToggle({
+    Name = "🔴 Record Macro",
+    CurrentValue = false,
+    Callback = function(value)
+        if value then
+            if selectedMacro then
+                currentRecording = {}
+                recording = true
+                startTime = tick()
+                Rayfield:Notify({Title = "Recording Started", Content = selectedMacro, Duration = 3})
+            else
+                Rayfield:Notify({Title = "Select Macro First", Content = "You need to select a macro!", Duration = 3})
+            end
+        else
+            recording = false
+            if selectedMacro and currentRecording then
+                macros[selectedMacro] = currentRecording
+                saveMacros()
+                Rayfield:Notify({Title = "Recording Saved", Content = selectedMacro, Duration = 3})
+            end
         end
     end
-end
+})
 
-loadMacros()
-
--- UI khởi tạo
-local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-screenGui.Name = "MacroUI"
-screenGui.ResetOnSpawn = false
-
-local mainFrame = Instance.new("Frame", screenGui)
-mainFrame.Size = UDim2.new(0, 300, 0, 300)
-mainFrame.Position = UDim2.new(0.7, 0, 0.3, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-mainFrame.BorderSizePixel = 0
-mainFrame.Name = "MainFrame"
-
-local title = Instance.new("TextLabel", mainFrame)
-title.Size = UDim2.new(1, 0, 0, 30)
-title.Text = "UTD Macro System"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 18
-
-local dropdown = Instance.new("TextButton", mainFrame)
-dropdown.Size = UDim2.new(1, -20, 0, 30)
-dropdown.Position = UDim2.new(0, 10, 0, 40)
-dropdown.Text = "Chọn Macro"
-dropdown.TextColor3 = Color3.new(1, 1, 1)
-dropdown.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-
-local nameBox = Instance.new("TextBox", mainFrame)
-nameBox.PlaceholderText = "Tên Macro mới"
-nameBox.Size = UDim2.new(1, -20, 0, 30)
-nameBox.Position = UDim2.new(0, 10, 0, 80)
-nameBox.Text = ""
-nameBox.TextColor3 = Color3.new(1, 1, 1)
-nameBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-
-local createBtn = Instance.new("TextButton", mainFrame)
-createBtn.Size = UDim2.new(1, -20, 0, 30)
-createBtn.Position = UDim2.new(0, 10, 0, 120)
-createBtn.Text = "Tạo Macro"
-createBtn.TextColor3 = Color3.new(1, 1, 1)
-createBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
-
-local recordBtn = Instance.new("TextButton", mainFrame)
-recordBtn.Size = UDim2.new(1, -20, 0, 30)
-recordBtn.Position = UDim2.new(0, 10, 0, 160)
-recordBtn.Text = "Bắt đầu Ghi"
-recordBtn.TextColor3 = Color3.new(1, 1, 1)
-recordBtn.BackgroundColor3 = Color3.fromRGB(90, 45, 45)
-
-local replayBtn = Instance.new("TextButton", mainFrame)
-replayBtn.Size = UDim2.new(1, -20, 0, 30)
-replayBtn.Position = UDim2.new(0, 10, 0, 200)
-replayBtn.Text = "Phát lại Macro"
-replayBtn.TextColor3 = Color3.new(1, 1, 1)
-replayBtn.BackgroundColor3 = Color3.fromRGB(45, 90, 45)
-
-local stopBtn = Instance.new("TextButton", mainFrame)
-stopBtn.Size = UDim2.new(1, -20, 0, 30)
-stopBtn.Position = UDim2.new(0, 10, 0, 240)
-stopBtn.Text = "Dừng Replay"
-stopBtn.TextColor3 = Color3.new(1, 1, 1)
-stopBtn.BackgroundColor3 = Color3.fromRGB(90, 45, 45)
-
-local function updateDropdown()
-    dropdown.Text = currentMacro or "Chọn Macro"
-end
-
-createBtn.MouseButton1Click:Connect(function()
-    local name = nameBox.Text
-    if name ~= "" and not MacroList[name] then
-        MacroList[name] = {}
-        currentMacro = name
-        updateDropdown()
-        saveMacros()
+-- Replay Macro
+MainTab:CreateButton({
+    Name = "▶️ Replay Macro",
+    Callback = function()
+        if selectedMacro and macros[selectedMacro] then
+            local data = macros[selectedMacro]
+            task.spawn(function()
+                for _, step in ipairs(data) do
+                    task.wait(step.time)
+                    game:GetService("ReplicatedStorage"):WaitForChild("GenericModules"):WaitForChild("Service")
+                        :WaitForChild("Network"):WaitForChild("PlayerPlaceTower"):FireServer(unpack(step.args))
+                end
+            end)
+        else
+            Rayfield:Notify({Title = "No Macro", Content = "Please select a valid macro.", Duration = 3})
+        end
     end
-end)
+})
 
-dropdown.MouseButton1Click:Connect(function()
-    print("Dropdown clicked: chưa có menu lựa chọn")
-end)
-
-recordBtn.MouseButton1Click:Connect(function()
-    if not currentMacro then return end
-    isRecording = not isRecording
-    if isRecording then
-        MacroList[currentMacro] = {}
-        startTime = os.clock()
-        recordBtn.Text = "Đang Ghi..."
-    else
-        recordBtn.Text = "Bắt đầu Ghi"
-        saveMacros()
-    end
-end)
-
-replayBtn.MouseButton1Click:Connect(function()
-    if not currentMacro or #MacroList[currentMacro] == 0 then return end
-    isReplaying = true
-    local replayStart = os.clock()
-    for _, action in ipairs(MacroList[currentMacro]) do
-        if not isReplaying then break end
-        local now = os.clock() - replayStart
-        local waitTime = action.delay - now
-        if waitTime > 0 then task.wait(waitTime) end
-        pcall(function()
-            ReplicatedStorage:WaitForChild("GenericModules")
-                :WaitForChild("Service")
-                :WaitForChild("Network")
-                :WaitForChild("PlayerPlaceTower")
-                :FireServer(action.id, action.pos, action.rot)
-        end)
-    end
-end)
-
-stopBtn.MouseButton1Click:Connect(function()
-    isReplaying = false
-end)
-
-local oldNamecall;
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    if isRecording and tostring(self) == "PlayerPlaceTower" and method == "FireServer" then
-        table.insert(MacroList[currentMacro], {
-            id = args[1],
-            pos = args[2],
-            rot = args[3],
-            delay = os.clock() - startTime
+-- Listen for tower placement (during recording)
+game:GetService("ReplicatedStorage"):WaitForChild("GenericModules"):WaitForChild("Service")
+    :WaitForChild("Network"):WaitForChild("PlayerPlaceTower").OnClientEvent:Connect(function(...)
+    if recording and selectedMacro then
+        table.insert(currentRecording, {
+            time = tick() - startTime,
+            args = {...}
         })
     end
-    return oldNamecall(self, ...)
 end)
